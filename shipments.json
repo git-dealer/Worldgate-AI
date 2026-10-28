@@ -1,0 +1,37 @@
+[
+    {
+        "id": "S001",
+        "origin": "Chennai",
+        "destination": "Dubai",
+        "weight": 1200,
+        "status": "booked"
+    },
+    {
+        "id": "S002",
+        "origin": "Mumbai",
+        "destination": "Singapore",
+        "weight": 2500,
+        "status": "in_transit"
+    },
+    {
+        "id": "S003",
+        "origin": "Delhi",
+        "destination": "London",
+        "weight": 1800,
+        "status": "in_transit"
+    },
+    {
+        "id": "S004",
+        "origin": "Hyderabad",
+        "destination": "New York",
+        "weight": 3200,
+        "status": "delivered"
+    },
+    {
+        "id": "S005",
+        "origin": "Kolkata",
+        "destination": "Tokyo",
+        "weight": 900,
+        "status": "delivered"
+    }
+]
