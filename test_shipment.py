@@ -3,7 +3,7 @@ from shipment import Shipment
 
 
 def test_is_heavy_true():
-    assert Shipment("S001", 1500, "booked").is_heavy() is True
+    assert Shipment("S001", 2500, "booked").is_heavy() is True
     
     
 def test_is_heavy_false():    
