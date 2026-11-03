@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
 
-DB_PATH = "worldgate.db"
+DB_PATH = os.environ.get("WORLDGATE_DB", "worldgate.db")
 
 
 def connect():
