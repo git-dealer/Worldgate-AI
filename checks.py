@@ -1,2 +1,5 @@
-def weights_match(invoice_kg: float, packing_list_kg: float, tolerance_kg: float = 0.0) -> bool:
-    return abs(invoice_kg - packing_list_kg) <= tolerance_kg
+from decimal import Decimal
+
+
+def weights_match(invoice_kg: Decimal, packing_list_kg: Decimal) -> bool:
+    return invoice_kg == packing_list_kg

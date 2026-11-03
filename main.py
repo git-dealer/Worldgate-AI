@@ -1,7 +1,10 @@
+from decimal import Decimal
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from checks import weights_match
+from doc_checks import REQUIRED_FIELDS, DocFields, find_mismatches, find_missing_fields
 from shipment import Shipment
 
 app = FastAPI(title="Worldgate API")
@@ -20,9 +23,8 @@ class ShipmentIn(BaseModel):
 
 
 class WeightCheckIn(BaseModel):
-    invoice_kg: float = Field(gt=0)
-    packing_list_kg: float = Field(gt=0)
-    tolerance_kg: float = Field(default=0.0, ge=0)
+    invoice_kg: Decimal = Field(gt=0)
+    packing_list_kg: Decimal = Field(gt=0)
 
 
 @app.get("/")
@@ -65,6 +67,33 @@ def create_shipment(item: ShipmentIn):
 
 @app.post("/check/weights")
 def check_weights(data: WeightCheckIn):
-    match = weights_match(data.invoice_kg, data.packing_list_kg, data.tolerance_kg)
+    match = weights_match(data.invoice_kg, data.packing_list_kg)
     difference = abs(data.invoice_kg - data.packing_list_kg)
-    return {"match": match, "difference_kg": difference}
+    return {"match": match, "difference_kg": str(difference)}
+
+
+@app.post("/check/documents")
+def check_documents(docs: dict[str, DocFields]):
+    unknown = [name for name in docs if name not in REQUIRED_FIELDS]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown document type {unknown}. Use: {list(REQUIRED_FIELDS)}",
+        )
+
+    mismatches = find_mismatches(docs)
+    missing = find_missing_fields(docs)
+
+    if mismatches or missing:
+        result = "issues found"
+    elif len(docs) < 2:
+        result = "completeness checked only; send two or more documents to compare them"
+    else:
+        result = "no issues in the fields checked"
+
+    return {
+        "documents_checked": list(docs.keys()),
+        "mismatches": mismatches,
+        "missing_fields": missing,
+        "result": result,
+    }
