@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+import db
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -91,9 +91,23 @@ def check_documents(docs: dict[str, DocFields]):
     else:
         result = "no issues in the fields checked"
 
+    check_id = db.save_check(list(docs.keys()), mismatches, missing, result)
+
     return {
+        "check_id": check_id,
         "documents_checked": list(docs.keys()),
         "mismatches": mismatches,
         "missing_fields": missing,
         "result": result,
     }
+@app.get("/checks")
+def list_saved_checks():
+    return db.list_checks()
+
+
+@app.get("/checks/{check_id}")
+def get_saved_check(check_id: int):
+    check = db.get_check(check_id)
+    if check is None:
+        raise HTTPException(status_code=404, detail="check not found")
+    return check
