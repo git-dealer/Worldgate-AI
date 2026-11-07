@@ -94,13 +94,17 @@ def test_missing_field_is_reported():
     assert "commercial_invoice: missing consignee_address" in response.json()["missing_fields"]
 
 
-def test_unknown_document_type_returns_400():
+def test_unknown_document_type_returns_422():
     response = client.post(
         "/check/documents",
         json={"commercial_invoice": invoice(), "bol": bl()},
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
+
+def test_empty_request_returns_400():
+    response = client.post("/check/documents", json={})
+    assert response.status_code == 400
 
 def test_net_weight_above_gross_returns_422():
     response = client.post(

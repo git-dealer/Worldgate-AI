@@ -1,10 +1,11 @@
 from decimal import Decimal
-import db
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+import db
 from checks import weights_match
-from doc_checks import REQUIRED_FIELDS, DocFields, find_mismatches, find_missing_fields
+from doc_checks import DocFields, find_mismatches, find_missing_fields
 from shipment import Shipment
 
 app = FastAPI(title="Worldgate API")
@@ -25,6 +26,54 @@ class ShipmentIn(BaseModel):
 class WeightCheckIn(BaseModel):
     invoice_kg: Decimal = Field(gt=0)
     packing_list_kg: Decimal = Field(gt=0)
+
+
+EXAMPLE_REQUEST = {
+    "commercial_invoice": {
+        "shipper_name": "ABC Exports Pvt Ltd",
+        "shipper_address": "Plot 12, Road No 5, Hyderabad, India",
+        "consignee_name": "Gulf Trading LLC",
+        "consignee_address": "Warehouse 7, Jebel Ali Free Zone, Dubai, UAE",
+        "consignee_country": "UAE",
+        "invoice_number": "INV-101",
+        "invoice_date": "2026-11-03",
+        "goods_description": "Cotton t-shirts, style TS-100",
+        "hs_code": "61091000",
+        "total_value": 12000,
+        "currency": "USD",
+        "incoterm": "FOB",
+        "shipping_method": "Sea",
+        "carrier_name": "Sample Shipping Line",
+        "shipping_date": "2026-11-20",
+        "bank_details_present": True,
+        "number_of_packages": 40,
+        "gross_weight_kg": 480,
+        "net_weight_kg": 450,
+    },
+    "bill_of_lading": {
+        "shipper_name": "ABC Exports Pvt Ltd",
+        "shipper_address": "Plot 12, Road No 5, Hyderabad, India",
+        "consignee_name": "Gulf Trading LLC",
+        "consignee_address": "Warehouse 7, Jebel Ali Free Zone, Dubai, UAE",
+        "carrier_name": "Sample Shipping Line",
+        "carrier_address": "1 Harbour Road, Mumbai, India",
+        "goods_description": "40 cartons cotton t-shirts, HS 6109.10",
+        "hs_code": "6109.10",
+        "number_of_packages": 40,
+        "incoterm": "FOB",
+        "gross_weight_kg": 479.5,
+        "net_weight_kg": 450,
+    },
+}
+
+
+class CheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", json_schema_extra={"examples": [EXAMPLE_REQUEST]})
+
+    commercial_invoice: DocFields | None = None
+    packing_list: DocFields | None = None
+    invoice_packing_list: DocFields | None = None
+    bill_of_lading: DocFields | None = None
 
 
 @app.get("/")
@@ -73,13 +122,14 @@ def check_weights(data: WeightCheckIn):
 
 
 @app.post("/check/documents")
-def check_documents(docs: dict[str, DocFields]):
-    unknown = [name for name in docs if name not in REQUIRED_FIELDS]
-    if unknown:
-        raise HTTPException(
-            status_code=400,
-            detail=f"unknown document type {unknown}. Use: {list(REQUIRED_FIELDS)}",
-        )
+def check_documents(request: CheckRequest):
+    docs = {
+        name: getattr(request, name)
+        for name in CheckRequest.model_fields
+        if getattr(request, name) is not None
+    }
+    if not docs:
+        raise HTTPException(status_code=400, detail="send at least one document")
 
     mismatches = find_mismatches(docs)
     missing = find_missing_fields(docs)
@@ -100,6 +150,8 @@ def check_documents(docs: dict[str, DocFields]):
         "missing_fields": missing,
         "result": result,
     }
+
+
 @app.get("/checks")
 def list_saved_checks():
     return db.list_checks()
